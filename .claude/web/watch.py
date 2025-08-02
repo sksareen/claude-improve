@@ -40,6 +40,8 @@ class ClaudeContextHandler(BaseHTTPRequestHandler):
             self.serve_context_api()
         elif url_path == '/api/feedback':
             self.serve_feedback_api()
+        elif url_path == '/api/ux_config':
+            self.serve_ux_config()
         else:
             self.send_error(404)
 
@@ -174,6 +176,81 @@ class ClaudeContextHandler(BaseHTTPRequestHandler):
             })
         except Exception as e:
             self.send_error(500, f"Error adding feedback: {e}")
+
+    def process_ux_feedback(self, feedback_content):
+        """Process UX feedback and generate CSS changes"""
+        feedback_lower = feedback_content.lower()
+        css_updates = {}
+        
+        # Zen/calm color scheme
+        if any(word in feedback_lower for word in ['zen', 'calm', 'peaceful', 'soothing']):
+            css_updates.update({
+                'zen_mode': True,
+                'background_color': '#0a0f0a',
+                'panel_color': '#1a251a', 
+                'text_color': '#d0e0d0',
+                'accent_color': '#6b9a6b',
+                'border_color': '#2a4a2a'
+            })
+        
+        # Dark mode enhancements
+        if any(word in feedback_lower for word in ['dark', 'darker', 'black']):
+            css_updates.update({
+                'dark_mode': True,
+                'background_color': '#000000',
+                'panel_color': '#111111',
+                'text_color': '#ffffff'
+            })
+        
+        # Settings button request
+        if any(word in feedback_lower for word in ['settings', 'customize', 'config']):
+            css_updates['show_settings'] = True
+        
+        # TTI/uptime fixes
+        if any(word in feedback_lower for word in ['tti', 'uptime', 'header']):
+            css_updates['fix_header_metrics'] = True
+        
+        if css_updates:
+            self.save_ux_config(css_updates)
+
+    def save_ux_config(self, updates):
+        """Save UX configuration that the frontend can pick up"""
+        config_path = self.base_path / 'ux_config.json'
+        
+        try:
+            # Load existing config
+            if config_path.exists():
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            else:
+                config = {
+                    'theme': 'default',
+                    'colors': {},
+                    'features': {},
+                    'last_updated': None
+                }
+            
+            # Apply updates
+            for key, value in updates.items():
+                if key.endswith('_color'):
+                    config['colors'][key] = value
+                elif key in ['zen_mode', 'dark_mode']:
+                    config['theme'] = key
+                elif key.startswith('show_') or key.startswith('fix_'):
+                    config['features'][key] = value
+                else:
+                    config[key] = value
+            
+            config['last_updated'] = datetime.now().isoformat() + 'Z'
+            
+            # Save config
+            with open(config_path, 'w', encoding='utf-8') as f:
+                json.dump(config, f, indent=2, ensure_ascii=False)
+            
+            print(f"🎨 UX config updated: {list(updates.keys())}")
+        
+        except Exception as e:
+            print(f"❌ Error saving UX config: {e}")
 
     def send_json_response(self, data):
         """Send JSON response with proper headers"""
