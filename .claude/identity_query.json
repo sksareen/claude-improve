@@ -1,0 +1,9 @@
+{
+  "timestamp": "2025-08-01T23:37:49.284197Z",
+  "trigger": "feedback_submitted",
+  "feedback_content": "uptime in the header isn't working",
+  "query_type": "identity_update",
+  "status": "processed",
+  "context": "User submitted feedback that should be processed by Claude",
+  "processed_at": "2025-08-01T23:37:49.967709Z"
+}

@@ -1,0 +1,2 @@
+redis[hiredis]>=4.5.0
+websockets>=11.0.0

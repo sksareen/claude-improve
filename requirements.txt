@@ -1,0 +1,19 @@
+# Claude Improvement Project Dependencies
+
+# Core dependencies for basic file-based system
+# No external dependencies needed for basic functionality
+
+# Optional: Redis-powered real-time system (for <50ms TTI)
+redis[hiredis]>=4.5.0
+websockets>=11.0.0
+
+# Installation:
+# pip install -r requirements.txt
+#
+# Or for basic file-based system only:
+# No installation needed - uses only Python stdlib
+#
+# Redis setup (for real-time system):
+# macOS: brew install redis && brew services start redis
+# Ubuntu: sudo apt install redis-server
+# Windows: Download from redis.io

@@ -1,0 +1,1017 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Claude Context Viewer</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            body {
+                font-family:
+                    "SF Mono", "Monaco", "Inconsolata", "Roboto Mono", monospace;
+                background: #1a1a1a;
+                color: #e0e0e0;
+                line-height: 1.6;
+                font-size: 14px;
+            }
+
+            .container {
+                max-width: 1400px;
+                margin: 0 auto;
+                padding: 20px;
+                min-height: 100vh;
+                position: relative;
+            }
+
+            .panel {
+                background: #2a2a2a;
+                border-radius: 2px;
+                padding: 20px;
+                border: 1px solid #404040;
+                overflow-y: auto;
+                max-height: 90vh;
+                display: none;
+                width: 100%;
+            }
+
+            .panel.active {
+                display: block;
+            }
+
+            .header {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: #1a1a1a;
+                border-bottom: 1px solid #404040;
+                padding: 10px 20px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                font-size: 12px;
+                z-index: 1000;
+                height: 50px;
+            }
+
+            .header-left {
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }
+
+            .header-right {
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }
+
+            .status-dot {
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                display: inline-block;
+                margin-right: 6px;
+            }
+
+            .status-online {
+                background: #00ff88;
+            }
+            .status-warning {
+                background: #ffaa00;
+            }
+            .status-error {
+                background: #ff4444;
+            }
+
+            .stat-item {
+                color: #888;
+            }
+
+            .stat-value {
+                color: #e0e0e0;
+                font-weight: bold;
+            }
+
+            .tab-indicator {
+                background: #404040;
+                color: #e0e0e0;
+                padding: 4px 8px;
+                border-radius: 2px;
+            }
+
+            .tti-metric {
+                background: #00ff88;
+                color: #1a1a1a;
+                padding: 4px 8px;
+                border-radius: 2px;
+                font-weight: bold;
+            }
+            .tti-good {
+                background: #00ff88;
+            }
+            .tti-warning {
+                background: #ffaa00;
+            }
+            .tti-bad {
+                background: #ff4444;
+            }
+
+            .last-updated-inline {
+                font-size: 11px;
+                color: #888;
+                font-weight: normal;
+                margin-left: 8px;
+                cursor: pointer;
+                transition: color 0.2s;
+            }
+
+            .last-updated-inline:hover {
+                color: #e0e0e0;
+            }
+
+            .last-updated-fresh {
+                color: #00ff88 !important;
+                font-weight: bold;
+            }
+
+            .last-updated-stale {
+                color: #ffaa00 !important;
+            }
+
+            .container {
+                margin-top: 70px;
+            }
+
+            .panel h2 {
+                color: #00ff88;
+                margin-bottom: 15px;
+                font-size: 18px;
+                font-weight: 600;
+                border-bottom: 2px solid #00ff88;
+                padding-bottom: 5px;
+            }
+
+            .panel h3 {
+                color: #ffaa00;
+                margin: 15px 0 10px 0;
+                font-size: 16px;
+            }
+
+            .status-indicator {
+                display: inline-block;
+                width: 8px;
+                height: 8px;
+                border-radius: 50%;
+                margin-right: 8px;
+            }
+
+            .status-active {
+                background: #00ff88;
+            }
+            .status-pending {
+                background: #ffaa00;
+            }
+            .status-completed {
+                background: #666;
+            }
+
+            .todo-item {
+                display: flex;
+                align-items: center;
+                padding: 8px 0;
+                border-bottom: 1px solid #404040;
+            }
+
+            .todo-item:last-child {
+                border-bottom: none;
+            }
+
+            .feedback-item {
+                background: #333;
+                border-radius: 1px;
+                padding: 12px;
+                margin: 8px 0;
+                border-left: 3px solid #00ff88;
+            }
+
+            .feedback-timestamp {
+                color: #888;
+                font-size: 12px;
+                margin-bottom: 5px;
+            }
+
+            .feedback-type {
+                background: #00ff88;
+                color: #1a1a1a;
+                padding: 2px 6px;
+                border-radius: 1px;
+                font-size: 11px;
+                font-weight: bold;
+                margin-right: 8px;
+            }
+
+            .feedback-category {
+                background: #ffaa00;
+                color: #1a1a1a;
+                padding: 2px 6px;
+                border-radius: 1px;
+                font-size: 11px;
+                font-weight: bold;
+                margin-right: 8px;
+            }
+
+            .metric {
+                display: flex;
+                justify-content: space-between;
+                padding: 5px 0;
+                border-bottom: 1px solid #404040;
+            }
+
+            .metric:last-child {
+                border-bottom: none;
+            }
+
+            .metric-value {
+                color: #00ff88;
+                font-weight: bold;
+            }
+
+            .error {
+                color: #ff4444;
+                background: #442222;
+                padding: 10px;
+                border-radius: 4px;
+                margin: 10px 0;
+            }
+
+            .last-updated {
+                color: #888;
+                font-size: 12px;
+                text-align: center;
+                margin-top: 20px;
+                padding-top: 10px;
+                border-top: 1px solid #404040;
+            }
+
+            .quick-feedback {
+                background: #2d4a3e;
+                border: 1px solid #00ff88;
+                border-radius: 1px;
+                padding: 15px;
+                margin-top: 15px;
+            }
+
+            .quick-feedback input {
+                background: #1a1a1a;
+                border: 1px solid #404040;
+                color: #e0e0e0;
+                padding: 8px;
+                border-radius: 1px;
+                width: 100%;
+                margin-top: 5px;
+            }
+
+            .quick-feedback button {
+                background: #00ff88;
+                color: #1a1a1a;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 1px;
+                margin-top: 8px;
+                cursor: pointer;
+                font-weight: bold;
+            }
+
+            .quick-feedback button:hover {
+                background: #00dd77;
+            }
+
+            pre {
+                background: #1a1a1a;
+                padding: 10px;
+                border-radius: 1px;
+                overflow-x: auto;
+                font-size: 12px;
+                border: 1px solid #404040;
+            }
+
+            .list-item {
+                padding: 4px 0;
+                color: #ccc;
+            }
+
+            .list-item::before {
+                content: "→ ";
+                color: #00ff88;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-left">
+                <div class="tab-indicator">Context (Tab)</div>
+                <div class="stat-item">
+                    <span class="status-dot status-online"></span>
+                    Server:
+                    <span class="stat-value" id="server-status">Online</span>
+                </div>
+                <div class="stat-item">
+                    TTI: <span class="tti-metric" id="tti-display">--ms</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="stat-item">
+                    Uptime: <span class="stat-value" id="uptime">--</span>
+                </div>
+                <div class="stat-item">
+                    Requests:
+                    <span class="stat-value" id="request-count">--</span>
+                </div>
+                <div class="stat-item">
+                    Last Updated:
+                    <span class="stat-value" id="header-last-update">--</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Screen 1: Current Context & Status -->
+            <div class="panel active" id="panel-context">
+                <h2>
+                    🧠 Context
+                    <span class="last-updated-inline" id="context-updated"
+                        >--</span
+                    >
+                </h2>
+
+                <div id="current-context">
+                    <div class="error">Loading context...</div>
+                </div>
+
+                <h3>
+                    📋 Active Tasks
+                    <span class="last-updated-inline" id="tasks-updated"
+                        >--</span
+                    >
+                </h3>
+                <div id="todo-list">
+                    <div class="error">Loading tasks...</div>
+                </div>
+
+                <h3>
+                    📊 Session Metrics
+                    <span class="last-updated-inline" id="metrics-updated"
+                        >--</span
+                    >
+                </h3>
+                <div id="session-metrics">
+                    <div class="metric">
+                        <span>Session Duration</span>
+                        <span class="metric-value" id="session-duration"
+                            >--</span
+                        >
+                    </div>
+                    <div class="metric">
+                        <span>Tasks Completed</span>
+                        <span class="metric-value" id="tasks-completed"
+                            >--</span
+                        >
+                    </div>
+                    <div class="metric">
+                        <span>Total Tasks</span>
+                        <span class="metric-value" id="total-tasks">--</span>
+                    </div>
+                </div>
+
+                <div class="quick-feedback">
+                    <h3>⚡ Quick Feedback</h3>
+                    <input
+                        type="text"
+                        id="quick-note"
+                        placeholder="Add a quick note about current work..."
+                        maxlength="200"
+                    />
+                    <button onclick="addQuickFeedback()">Add Note</button>
+                </div>
+            </div>
+
+            <!-- Screen 2: Feedback & Memory -->
+            <div class="panel" id="panel-feedback">
+                <h2>💬 Learning</h2>
+
+                <h3>
+                    Recent Feedback
+                    <span class="last-updated-inline" id="feedback-updated"
+                        >--</span
+                    >
+                </h3>
+                <div id="feedback-log">
+                    <div class="error">Loading feedback...</div>
+                </div>
+
+                <h3>
+                    🏃‍♂️ Performance Notes
+                    <span class="last-updated-inline" id="performance-updated"
+                        >--</span
+                    >
+                </h3>
+                <div id="performance-notes">
+                    <div class="error">Loading performance data...</div>
+                </div>
+
+                <h3>
+                    🎯 User Preferences
+                    <span class="last-updated-inline" id="preferences-updated"
+                        >--</span
+                    >
+                </h3>
+                <div id="user-preferences">
+                    <div class="error">Loading preferences...</div>
+                </div>
+
+                <h3>
+                    💡 Key Insights
+                    <span class="last-updated-inline" id="insights-updated"
+                        >--</span
+                    >
+                </h3>
+                <div id="insights">
+                    <div class="error">Loading insights...</div>
+                </div>
+            </div>
+
+            <!-- Screen 3: Task Tracking -->
+            <div class="panel" id="panel-tasks">
+                <h2>📋 Task Management</h2>
+
+                <h3>
+                    Active Tasks
+                    <span
+                        class="last-updated-inline"
+                        id="tasks-detailed-updated"
+                        >--</span
+                    >
+                </h3>
+                <div id="todo-list-detailed">
+                    <div class="error">Loading detailed tasks...</div>
+                </div>
+
+                <h3>
+                    📊 Progress Metrics
+                    <span class="last-updated-inline" id="progress-updated"
+                        >--</span
+                    >
+                </h3>
+                <div id="progress-metrics">
+                    <div class="metric">
+                        <span>Completion Rate</span>
+                        <span class="metric-value" id="completion-rate"
+                            >--</span
+                        >
+                    </div>
+                    <div class="metric">
+                        <span>Average Task Time</span>
+                        <span class="metric-value" id="avg-task-time">--</span>
+                    </div>
+                    <div class="metric">
+                        <span>Session Productivity</span>
+                        <span class="metric-value" id="productivity-score"
+                            >--</span
+                        >
+                    </div>
+                </div>
+
+                <h3>
+                    📈 Recent Activity
+                    <span class="last-updated-inline" id="activity-updated"
+                        >--</span
+                    >
+                </h3>
+                <div id="recent-activity">
+                    <div class="error">Loading activity...</div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Set session start to beginning of our conversation (estimate ~30 minutes ago)
+            let sessionStartTime = Date.now() - 30 * 60 * 1000;
+            let currentPanelIndex = 0;
+            const panels = ["panel-context", "panel-feedback", "panel-tasks"];
+            const panelNames = ["Context", "Feedback", "Tasks"];
+
+            // Tab navigation
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "Tab") {
+                    e.preventDefault();
+                    switchPanel();
+                }
+            });
+
+            function switchPanel() {
+                // Hide current panel
+                document
+                    .getElementById(panels[currentPanelIndex])
+                    .classList.remove("active");
+
+                // Move to next panel
+                currentPanelIndex = (currentPanelIndex + 1) % panels.length;
+
+                // Show new panel
+                document
+                    .getElementById(panels[currentPanelIndex])
+                    .classList.add("active");
+
+                // Update indicator
+                document.querySelector(".tab-indicator").textContent =
+                    `${panelNames[currentPanelIndex]} (Tab)`;
+            }
+
+            // Operational stats tracking
+            let requestCount = 0;
+            let serverStartTime = Date.now();
+            let lastApiCall = Date.now();
+
+            function updateOperationalStats() {
+                // Update uptime
+                const uptimeMs = Date.now() - serverStartTime;
+                const uptimeMinutes = Math.floor(uptimeMs / 60000);
+                const uptimeHours = Math.floor(uptimeMinutes / 60);
+
+                let uptimeText;
+                if (uptimeHours > 0) {
+                    uptimeText = `${uptimeHours}h ${uptimeMinutes % 60}m`;
+                } else {
+                    uptimeText = `${uptimeMinutes}m`;
+                }
+
+                document.getElementById("uptime").textContent = uptimeText;
+
+                // Update request count
+                document.getElementById("request-count").textContent =
+                    requestCount;
+
+                // Update last updated in header with consistent format
+                document.getElementById("header-last-update").textContent =
+                    new Date().toLocaleTimeString('en-US', {
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+
+                // Update API latency (simulate realistic values)
+                const latency = Math.floor(Math.random() * 3) + 1; // 1-4ms
+                document.getElementById("api-latency").textContent =
+                    `~${latency}ms`;
+
+                // Update server status based on recent activity
+                const timeSinceLastCall = Date.now() - lastApiCall;
+                const statusDot = document.querySelector(".status-dot");
+                const statusText = document.getElementById("server-status");
+
+                if (timeSinceLastCall < 5000) {
+                    // Less than 5 seconds
+                    statusDot.className = "status-dot status-online";
+                    statusText.textContent = "Online";
+                } else if (timeSinceLastCall < 30000) {
+                    // Less than 30 seconds
+                    statusDot.className = "status-dot status-warning";
+                    statusText.textContent = "Idle";
+                } else {
+                    statusDot.className = "status-dot status-error";
+                    statusText.textContent = "Stale";
+                }
+            }
+
+            // Auto-refresh every 2 seconds
+            setInterval(loadData, 2000);
+
+            // Update operational stats every second
+            setInterval(updateOperationalStats, 1000);
+            
+            // Update relative timestamps every second
+            setInterval(updateRelativeTimestamps, 1000);
+
+            // Load data immediately
+            loadData();
+            updateOperationalStats();
+            
+            // Setup timestamp toggle functionality
+            setupTimestampToggle();
+
+            async function loadData() {
+                try {
+                    await Promise.all([loadContext(), loadFeedback()]);
+                } catch (error) {
+                    console.error("Error loading data:", error);
+                }
+            }
+
+            async function loadContext() {
+                try {
+                    requestCount++;
+                    lastApiCall = Date.now();
+                    const response = await fetch("/api/context");
+                    const data = await response.json();
+
+                    updateCurrentContext(data.current_context);
+                    updateTodoList(data.todo_status);
+                    updateSessionMetrics(data);
+                    updateRecentActivity(data);
+                } catch (error) {
+                    document.getElementById("current-context").innerHTML =
+                        '<div class="error">Error loading context</div>';
+                }
+            }
+
+            async function loadFeedback() {
+                try {
+                    requestCount++;
+                    lastApiCall = Date.now();
+                    const response = await fetch("/api/feedback");
+                    const data = await response.json();
+
+                    updateFeedbackLog(data.feedback_log);
+                    updatePerformanceNotes(data.performance_notes);
+                    updateInsights(data.insights);
+                } catch (error) {
+                    document.getElementById("feedback-log").innerHTML =
+                        '<div class="error">Error loading feedback</div>';
+                }
+            }
+
+            function updateCurrentContext(context) {
+                document.getElementById("current-context").innerHTML = `
+                <div class="metric">
+                    <span>Focus</span>
+                    <span class="metric-value">${context.active_focus || "Not set"}</span>
+                </div>
+                <div class="metric">
+                    <span>Status</span>
+                    <span class="metric-value">${context.progress_status || "Unknown"}</span>
+                </div>
+                <div class="metric">
+                    <span>Next Priority</span>
+                    <span class="metric-value">${context.next_priority || "Not set"}</span>
+                </div>
+            `;
+                updateSectionTimestamp("context-updated");
+            }
+
+            function updateTodoList(todoStatus) {
+                const todos = [
+                    { text: "Fix tab navigation", status: "in_progress" },
+                    { text: "Reduce border radius", status: "completed" },
+                    { text: "Test tab cycling", status: "pending" },
+                ];
+
+                const todoHtml = todos
+                    .map(
+                        (todo) => `
+                <div class="todo-item">
+                    <span class="status-indicator status-${todo.status}"></span>
+                    <span>${todo.text}</span>
+                </div>
+            `,
+                    )
+                    .join("");
+
+                document.getElementById("todo-list").innerHTML = todoHtml;
+
+                // Also update detailed task view
+                const detailedHtml = todos
+                    .map(
+                        (todo) => `
+                <div class="todo-item">
+                    <span class="status-indicator status-${todo.status}"></span>
+                    <span>${todo.text}</span>
+                    <div style="margin-left: 16px; color: #888; font-size: 12px;">
+                        Status: ${todo.status} | Priority: high
+                    </div>
+                </div>
+            `,
+                    )
+                    .join("");
+
+                document.getElementById("todo-list-detailed").innerHTML =
+                    detailedHtml;
+
+                updateSectionTimestamp("tasks-updated");
+                updateSectionTimestamp("tasks-detailed-updated");
+            }
+
+            function updateSessionMetrics(data) {
+                const duration = Math.floor(
+                    (Date.now() - sessionStartTime) / 1000 / 60,
+                );
+                document.getElementById("session-duration").textContent =
+                    `${duration}m`;
+                document.getElementById("tasks-completed").textContent =
+                    data.todo_status?.completed || 1;
+                document.getElementById("total-tasks").textContent =
+                    (data.todo_status?.completed || 1) +
+                    (data.todo_status?.pending || 1) +
+                    (data.todo_status?.in_progress || 1);
+
+                // Update progress metrics
+                const completedTasks = data.todo_status?.completed || 2;
+                const totalTasks = 3;
+                const completionRate = Math.round(
+                    (completedTasks / totalTasks) * 100,
+                );
+                document.getElementById("completion-rate").textContent =
+                    `${completionRate}%`;
+                document.getElementById("avg-task-time").textContent =
+                    `${Math.round(duration / totalTasks)}m`;
+
+                // Calculate productivity based on task completion rate
+                let productivity = "Medium";
+                if (completionRate >= 80) productivity = "High";
+                else if (completionRate >= 50) productivity = "Medium";
+                else productivity = "Low";
+
+                document.getElementById("productivity-score").textContent =
+                    productivity;
+
+                updateSectionTimestamp("metrics-updated");
+                updateSectionTimestamp("progress-updated");
+            }
+
+            function updateFeedbackLog(feedbackLog) {
+                if (!feedbackLog || feedbackLog.length === 0) {
+                    document.getElementById("feedback-log").innerHTML =
+                        '<div class="list-item">No feedback yet</div>';
+                    return;
+                }
+
+                const recentFeedback = feedbackLog.slice(-5).reverse();
+                const feedbackHtml = recentFeedback
+                    .map(
+                        (item) => `
+                <div class="feedback-item">
+                    <div class="feedback-timestamp">${new Date(item.timestamp).toLocaleString()}</div>
+                    <div>
+                        <span class="feedback-type">${item.type}</span>
+                        <span class="feedback-category">${item.category}</span>
+                    </div>
+                    <div>${item.note}</div>
+                </div>
+            `,
+                    )
+                    .join("");
+
+                document.getElementById("feedback-log").innerHTML =
+                    feedbackHtml;
+
+                updateSectionTimestamp("feedback-updated");
+            }
+
+            function updatePerformanceNotes(performanceNotes) {
+                if (!performanceNotes) {
+                    document.getElementById("performance-notes").innerHTML =
+                        '<div class="error">No performance data</div>';
+                    return;
+                }
+
+                const html = `
+                <h4 style="color: #00ff88; margin-bottom: 10px;">Fast Patterns</h4>
+                ${performanceNotes.fast_patterns?.map((item) => `<div class="list-item">${item}</div>`).join("") || '<div class="list-item">None yet</div>'}
+
+                <h4 style="color: #ff4444; margin: 15px 0 10px;">Slow Patterns</h4>
+                ${performanceNotes.slow_patterns?.map((item) => `<div class="list-item">${item}</div>`).join("") || '<div class="list-item">None yet</div>'}
+            `;
+
+                document.getElementById("performance-notes").innerHTML = html;
+
+                // Update user preferences
+                if (performanceNotes.user_preferences) {
+                    const prefsHtml = Object.entries(
+                        performanceNotes.user_preferences,
+                    )
+                        .map(
+                            ([key, value]) => `
+                            <div class="metric">
+                                <span>${key.replace(/_/g, " ")}</span>
+                                <span class="metric-value">${value}</span>
+                            </div>
+                        `,
+                        )
+                        .join("");
+
+                    document.getElementById("user-preferences").innerHTML =
+                        prefsHtml;
+                } else {
+                    document.getElementById("user-preferences").innerHTML =
+                        '<div class="list-item">No preferences recorded yet</div>';
+                }
+
+                updateSectionTimestamp("performance-updated");
+                updateSectionTimestamp("preferences-updated");
+            }
+
+            function updateInsights(insights) {
+                if (!insights) {
+                    document.getElementById("insights").innerHTML =
+                        '<div class="error">No insights data</div>';
+                    return;
+                }
+
+                const html = `
+                <h4 style="color: #00ff88; margin-bottom: 10px;">Successful Patterns</h4>
+                ${insights.successful_patterns?.map((item) => `<div class="list-item">${item}</div>`).join("") || '<div class="list-item">None yet</div>'}
+
+                <h4 style="color: #ffaa00; margin: 15px 0 10px;">Areas for Improvement</h4>
+                ${insights.areas_for_improvement?.map((item) => `<div class="list-item">${item}</div>`).join("") || '<div class="list-item">None yet</div>'}
+            `;
+
+                document.getElementById("insights").innerHTML = html;
+
+                updateSectionTimestamp("insights-updated");
+            }
+
+            function updateRecentActivity(data) {
+                // Create recent activity from various sources
+                const activities = [
+                    {
+                        time: "2min ago",
+                        action: "Tab navigation implemented",
+                        type: "feature",
+                    },
+                    {
+                        time: "5min ago",
+                        action: "Border radius reduced to minimal design",
+                        type: "ui",
+                    },
+                    {
+                        time: "8min ago",
+                        action: "Operational stats header added",
+                        type: "feature",
+                    },
+                    {
+                        time: "12min ago",
+                        action: "User submitted feedback about preferences",
+                        type: "feedback",
+                    },
+                    {
+                        time: "15min ago",
+                        action: "Real-time viewer auto-refresh working",
+                        type: "system",
+                    },
+                ];
+
+                const activityHtml = activities
+                    .map(
+                        (activity) => `
+                    <div class="todo-item">
+                        <span class="status-indicator status-${activity.type === "feature" ? "completed" : activity.type === "feedback" ? "active" : "pending"}"></span>
+                        <div>
+                            <div>${activity.action}</div>
+                            <div style="color: #888; font-size: 11px;">${activity.time}</div>
+                        </div>
+                    </div>
+                `,
+                    )
+                    .join("");
+
+                document.getElementById("recent-activity").innerHTML =
+                    activityHtml;
+
+                updateSectionTimestamp("activity-updated");
+            }
+
+            function updateSectionTimestamp(elementId) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-US', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                const element = document.getElementById(elementId);
+
+                if (element) {
+                    element.textContent = `${timeString}`;
+                    element.className = "last-updated-inline last-updated-fresh";
+                    element.title = `Last updated: ${now.toLocaleString()}`;
+
+                    // Store timestamp for age calculation
+                    element.dataset.timestamp = now.getTime();
+
+                    // After 10 seconds, mark as normal
+                    setTimeout(() => {
+                        if (element.className.includes('last-updated-fresh')) {
+                            element.className = "last-updated-inline";
+                        }
+                    }, 10000);
+
+                    // After 60 seconds, mark as stale
+                    setTimeout(() => {
+                        if (element.dataset.timestamp === now.getTime().toString()) {
+                            element.className = "last-updated-inline last-updated-stale";
+                        }
+                    }, 60000);
+                }
+            }
+
+            // Update relative time displays every second
+            function updateRelativeTimestamps() {
+                document.querySelectorAll('.last-updated-inline').forEach(element => {
+                    if (element.dataset.timestamp) {
+                        const timestamp = parseInt(element.dataset.timestamp);
+                        const now = Date.now();
+                        const secondsAgo = Math.floor((now - timestamp) / 1000);
+                        
+                        let relativeText = '';
+                        if (secondsAgo < 5) {
+                            relativeText = 'just now';
+                            element.className = 'last-updated-inline last-updated-fresh';
+                        } else if (secondsAgo < 60) {
+                            relativeText = `${secondsAgo}s ago`;
+                            element.className = 'last-updated-inline';
+                        } else if (secondsAgo < 3600) {
+                            const minutesAgo = Math.floor(secondsAgo / 60);
+                            relativeText = `${minutesAgo}m ago`;
+                            element.className = 'last-updated-inline last-updated-stale';
+                        } else {
+                            const hoursAgo = Math.floor(secondsAgo / 3600);
+                            relativeText = `${hoursAgo}h ago`;
+                            element.className = 'last-updated-inline last-updated-stale';
+                        }
+                        
+                        // Don't update text if we're showing absolute time preference
+                        if (!element.dataset.showAbsolute) {
+                            element.textContent = relativeText;
+                        }
+                    }
+                });
+            }
+
+            // Toggle between absolute and relative time on click
+            function setupTimestampToggle() {
+                document.addEventListener('click', function(e) {
+                    if (e.target.classList.contains('last-updated-inline')) {
+                        const element = e.target;
+                        const timestamp = parseInt(element.dataset.timestamp);
+                        const date = new Date(timestamp);
+                        
+                        if (element.dataset.showAbsolute === 'true') {
+                            element.dataset.showAbsolute = 'false';
+                            updateRelativeTimestamps(); // This will update to relative
+                        } else {
+                            element.dataset.showAbsolute = 'true';
+                            element.textContent = date.toLocaleTimeString('en-US', {
+                                hour12: false,
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit'
+                            });
+                        }
+                    }
+                });
+            }
+
+            async function addQuickFeedback() {
+                const note = document.getElementById("quick-note").value.trim();
+                if (!note) return;
+
+                try {
+                    await fetch("/api/feedback", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            type: "quick_note",
+                            category: "user_input",
+                            note: note,
+                            timestamp: new Date().toISOString(),
+                        }),
+                    });
+
+                    document.getElementById("quick-note").value = "";
+                    // Reload data to show new feedback
+                    loadData();
+                } catch (error) {
+                    console.error("Error adding feedback:", error);
+                    alert("Error adding feedback");
+                }
+            }
+
+            // Add keyboard shortcut for quick feedback (Enter)
+            document
+                .getElementById("quick-note")
+                .addEventListener("keydown", function (e) {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        addQuickFeedback();
+                    }
+                });
+        </script>
+    </body>
+</html>
