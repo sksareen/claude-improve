@@ -213,6 +213,27 @@ class ClaudeContextHandler(BaseHTTPRequestHandler):
         if css_updates:
             self.save_ux_config(css_updates)
 
+    def serve_ux_config(self):
+        """Serve UX configuration for dynamic theme changes"""
+        try:
+            config_path = self.base_path / 'ux_config.json'
+            
+            if config_path.exists():
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+            else:
+                # Default config
+                config = {
+                    'theme': 'default',
+                    'colors': {},
+                    'features': {},
+                    'last_updated': None
+                }
+            
+            self.send_json_response(config)
+        except Exception as e:
+            self.send_error(500, f"Error loading UX config: {e}")
+
     def save_ux_config(self, updates):
         """Save UX configuration that the frontend can pick up"""
         config_path = self.base_path / 'ux_config.json'

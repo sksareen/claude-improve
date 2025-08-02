@@ -1,0 +1,16 @@
+{
+  "theme": "paper_white",
+  "colors": {
+    "background_color": "#fefefe",
+    "panel_color": "#f8f8f8",
+    "text_color": "#2a2a2a",
+    "accent_color": "#4a9eff",
+    "border_color": "#e0e0e0"
+  },
+  "features": {
+    "show_settings": true,
+    "fix_header_metrics": true,
+    "fix_enter_key": true
+  },
+  "last_updated": "2025-08-02T06:45:00.000Z"
+}

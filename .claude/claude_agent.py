@@ -20,6 +20,7 @@ class ClaudeAgent:
         self.feedback_path = self.claude_dir / 'feedback.json'
         self.context_path = self.claude_dir / 'context.json'
         self.memory_path = self.claude_dir / 'memory.md'
+        self.ux_config_path = self.claude_dir / 'ux_config.json'
         self.processed_queries = set()
         
     def watch_for_queries(self):
@@ -68,6 +69,8 @@ class ClaudeAgent:
                 self.add_insight(action['data'])
             elif action['type'] == 'update_performance':
                 self.update_performance_notes(action['data'])
+            elif action['type'] == 'update_ux':
+                self.update_ux_config(action['data'])
         
         print(f"✅ Processed {len(actions)} actions from feedback")
     
@@ -76,8 +79,56 @@ class ClaudeAgent:
         feedback_lower = feedback.lower()
         actions = []
         
-        # UI/Design preferences
-        if any(word in feedback_lower for word in ['ui', 'design', 'look', 'appearance', 'visual']):
+        # UX Theme changes (priority over general UI preferences)
+        ux_updates = {}
+        
+        # Theme detection
+        if any(word in feedback_lower for word in ['zen', 'calm', 'peaceful', 'soothing']):
+            ux_updates.update({
+                'theme': 'zen_mode',
+                'background_color': '#0a0f0a',
+                'panel_color': '#1a251a',
+                'text_color': '#d0e0d0',
+                'accent_color': '#6b9a6b',
+                'border_color': '#2a4a2a'
+            })
+        elif any(word in feedback_lower for word in ['paper', 'white', 'light', 'bright']):
+            ux_updates.update({
+                'theme': 'paper_white',
+                'background_color': '#fefefe',
+                'panel_color': '#f8f8f8',
+                'text_color': '#2a2a2a',
+                'accent_color': '#4a9eff',
+                'border_color': '#e0e0e0'
+            })
+        elif any(word in feedback_lower for word in ['dark', 'darker', 'black']):
+            ux_updates.update({
+                'theme': 'dark_mode',
+                'background_color': '#000000',
+                'panel_color': '#111111',
+                'text_color': '#ffffff'
+            })
+        
+        # Feature flags
+        if any(word in feedback_lower for word in ['settings', 'customize', 'config']):
+            ux_updates['show_settings'] = True
+        
+        if any(word in feedback_lower for word in ['tti', 'uptime', 'header']):
+            ux_updates['fix_header_metrics'] = True
+            
+        if any(word in feedback_lower for word in ['enter', 'key', 'feedback', 'entry']):
+            ux_updates['fix_enter_key'] = True
+        
+        # If UX changes detected, add UX update action
+        if ux_updates:
+            actions.append({
+                'type': 'update_ux',
+                'data': ux_updates
+            })
+            print(f"   🎨 Detected UX changes: {list(ux_updates.keys())}")
+        
+        # UI/Design preferences (for general feedback)
+        elif any(word in feedback_lower for word in ['ui', 'design', 'look', 'appearance', 'visual']):
             actions.append({
                 'type': 'update_preferences',
                 'data': {
@@ -280,6 +331,45 @@ class ClaudeAgent:
             
         except Exception as e:
             print(f"   ❌ Error marking query as processed: {e}")
+    
+    def update_ux_config(self, data):
+        """Update UX configuration file for real-time theme changes"""
+        try:
+            # Load existing UX config
+            if self.ux_config_path.exists():
+                with open(self.ux_config_path, 'r') as f:
+                    config = json.load(f)
+            else:
+                config = {
+                    'theme': 'default',
+                    'colors': {},
+                    'features': {},
+                    'last_updated': None
+                }
+            
+            # Apply updates
+            for key, value in data.items():
+                if key == 'theme':
+                    config['theme'] = value
+                elif key.endswith('_color'):
+                    config['colors'][key] = value
+                elif key.startswith('show_') or key.startswith('fix_'):
+                    if 'features' not in config:
+                        config['features'] = {}
+                    config['features'][key] = value
+                else:
+                    config[key] = value
+            
+            config['last_updated'] = datetime.now().isoformat() + 'Z'
+            
+            # Save config
+            with open(self.ux_config_path, 'w') as f:
+                json.dump(config, f, indent=2)
+            
+            print(f"   🎨 Updated UX config: {data.get('theme', 'features')}")
+            
+        except Exception as e:
+            print(f"   ❌ Error updating UX config: {e}")
 
 
 def main():
